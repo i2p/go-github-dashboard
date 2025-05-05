@@ -1,6 +1,10 @@
 name: Generate GitHub Dashboard
 
 on:
+  push:
+    branches:
+    - main
+    # Trigger on push to main branch
   schedule:
     # Run once per day at 3:00 AM UTC
     - cron: '0 3 * * *'
