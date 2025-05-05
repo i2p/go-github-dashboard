@@ -39,6 +39,7 @@ func NewHTMLGenerator(config *types.Config) (*HTMLGenerator, error) {
             <span>{{.TotalPRs}} open pull requests</span>
             <span>{{.TotalIssues}} open issues</span>
             <span>{{.TotalDiscussions}} recent discussions</span>
+			<span>{{.TotalWorkflowRuns}} recent workflow runs</span>
         </div>
         <p class="generated-at">Generated on {{.GeneratedAt.Format "January 2, 2006 at 15:04"}}</p>
     </header>
@@ -57,6 +58,7 @@ func NewHTMLGenerator(config *types.Config) (*HTMLGenerator, error) {
                             <span class="stat">{{len .PullRequests}} PRs</span>
                             <span class="stat">{{len .Issues}} issues</span>
                             <span class="stat">{{len .Discussions}} discussions</span>
+							<span class="stat">{{len .WorkflowRuns}} workflows</span>
                         </div>
                     </label>
                     <div class="collapsible-content">
@@ -162,6 +164,51 @@ func NewHTMLGenerator(config *types.Config) (*HTMLGenerator, error) {
                             </div>
                         </div>
                         {{end}}
+						{{if .WorkflowRuns}}
+							<div class="collapsible">
+								<input type="checkbox" id="workflows-{{.Name}}" class="toggle">
+								<label for="workflows-{{.Name}}" class="toggle-label section-label workflow-label">
+									Recent Workflow Runs ({{len .WorkflowRuns}})
+								</label>
+								<div class="collapsible-content">
+									<table class="data-table">
+										<thead>
+											<tr>
+												<th>Workflow</th>
+												<th>Branch</th>
+												<th>Status</th>
+												<th>Run #</th>
+												<th>Created</th>
+											</tr>
+										</thead>
+										<tbody>
+											{{range .WorkflowRuns}}
+											<tr>
+												<td><a href="{{.URL}}" target="_blank">{{.Name}}</a></td>
+												<td>{{.Branch}}</td>
+												<td class="workflow-status workflow-status-{{.Status}} workflow-conclusion-{{.Conclusion}}">
+													{{if eq .Status "completed"}}
+														{{if eq .Conclusion "success"}}✅ Success{{end}}
+														{{if eq .Conclusion "failure"}}❌ Failure{{end}}
+														{{if eq .Conclusion "cancelled"}}⚪ Cancelled{{end}}
+														{{if eq .Conclusion "skipped"}}⏭️ Skipped{{end}}
+														{{if eq .Conclusion "timed_out"}}⏱️ Timed Out{{end}}
+														{{if eq .Conclusion ""}}⚪ {{.Status}}{{end}}
+													{{else}}
+														{{if eq .Status "in_progress"}}🔄 In Progress{{end}}
+														{{if eq .Status "queued"}}⏳ Queued{{end}}
+														{{if eq .Status ""}}⚪ Unknown{{end}}
+													{{end}}
+												</td>
+												<td>{{.RunNumber}}</td>
+												<td>{{.CreatedAt.Format "2006-01-02 15:04"}}</td>
+											</tr>
+											{{end}}
+										</tbody>
+									</table>
+								</div>
+							</div>
+						{{end}}
 
                         <div class="repo-links">
                             <a href="repositories/{{.Name}}.md">View as Markdown</a>
@@ -433,6 +480,30 @@ footer {
         align-items: flex-start;
         gap: 5px;
     }
+
+	.workflow-label {
+		color: #2088ff;
+	}
+
+	.workflow-status {
+		font-weight: 500;
+	}
+
+	.workflow-status-completed.workflow-conclusion-success {
+		color: #22863a;
+	}
+
+	.workflow-status-completed.workflow-conclusion-failure {
+		color: #cb2431;
+	}
+
+	.workflow-status-in_progress {
+		color: #dbab09;
+	}
+
+	.workflow-status-queued {
+		color: #6f42c1;
+	}
 }`
 
 	err := os.WriteFile(filepath.Join(g.outputDir, "style.css"), []byte(css), 0644)

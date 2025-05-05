@@ -32,6 +32,7 @@ func NewCache(config *types.Config) *Cache {
 	gob.Register([]types.PullRequest{})
 	gob.Register([]types.Issue{})
 	gob.Register([]types.Discussion{})
+	gob.Register([]types.WorkflowRun{})
 
 	cache := &Cache{
 		items: make(map[string]CacheItem),

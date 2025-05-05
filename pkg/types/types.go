@@ -13,9 +13,11 @@ type Repository struct {
 	Forks       int
 	LastUpdated time.Time
 
-	PullRequests []PullRequest
-	Issues       []Issue
-	Discussions  []Discussion
+	PullRequests      []PullRequest
+	Issues            []Issue
+	Discussions       []Discussion
+	WorkflowRuns      []WorkflowRun
+	TotalWorkflowRuns int
 }
 
 // PullRequest represents a GitHub pull request
@@ -62,13 +64,14 @@ type Label struct {
 
 // Dashboard represents the entire dashboard data
 type Dashboard struct {
-	Username         string
-	Organization     string
-	GeneratedAt      time.Time
-	Repositories     []Repository
-	TotalPRs         int
-	TotalIssues      int
-	TotalDiscussions int
+	Username          string
+	Organization      string
+	GeneratedAt       time.Time
+	Repositories      []Repository
+	TotalPRs          int
+	TotalIssues       int
+	TotalDiscussions  int
+	TotalWorkflowRuns int
 }
 
 // Config holds the application configuration
@@ -80,4 +83,17 @@ type Config struct {
 	CacheDir     string
 	CacheTTL     time.Duration
 	Verbose      bool
+}
+
+// WorkflowRun represents a GitHub Actions workflow run
+type WorkflowRun struct {
+	ID         int64
+	Name       string
+	URL        string
+	Status     string // "completed", "in_progress", "queued"
+	Conclusion string // "success", "failure", "cancelled", "skipped", etc.
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	RunNumber  int
+	Branch     string
 }

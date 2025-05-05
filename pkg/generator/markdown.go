@@ -59,6 +59,17 @@ func NewMarkdownGenerator(config *types.Config) (*MarkdownGenerator, error) {
 *No recent discussions*
 {{end}}
 
+## Recent Workflow Runs
+
+{{if .WorkflowRuns}}
+| Workflow | Branch | Status | Run # | Created |
+|----------|--------|--------|-------|---------|
+{{range .WorkflowRuns}}| [{{.Name}}]({{.URL}}) | {{.Branch}} | {{if eq .Status "completed"}}{{if eq .Conclusion "success"}}✅ Success{{end}}{{if eq .Conclusion "failure"}}❌ Failure{{end}}{{if eq .Conclusion "cancelled"}}⚪ Cancelled{{end}}{{if eq .Conclusion "skipped"}}⏭️ Skipped{{end}}{{if eq .Conclusion "timed_out"}}⏱️ Timed Out{{end}}{{if eq .Conclusion ""}}⚪ {{.Status}}{{end}}{{else}}{{if eq .Status "in_progress"}}🔄 In Progress{{end}}{{if eq .Status "queued"}}⏳ Queued{{end}}{{if eq .Status ""}}⚪ Unknown{{end}}{{end}} | {{.RunNumber}} | {{.CreatedAt.Format "2006-01-02 15:04"}} |
+{{end}}
+{{else}}
+*No recent workflow runs*
+{{end}}
+
 ---
 *Generated at {{.GeneratedAt.Format "2006-01-02 15:04:05"}}*
 `)

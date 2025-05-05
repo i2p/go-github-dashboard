@@ -136,10 +136,17 @@ func runGenerate() error {
 				log.Printf("Error fetching discussions for %s/%s: %v", owner, repoName, err)
 			}
 
+			// Fetch workflow runs
+			workflowRuns, err := githubClient.GetWorkflowRuns(ctx, owner, repoName)
+			if err != nil {
+				log.Printf("Error fetching workflow runs for %s/%s: %v", owner, repoName, err)
+			}
+
 			// Update the repository with the fetched data
 			repo.PullRequests = pullRequests
 			repo.Issues = issues
 			repo.Discussions = discussions
+			repo.WorkflowRuns = workflowRuns
 
 			// Send the updated repository to the channel
 			reposChan <- repo

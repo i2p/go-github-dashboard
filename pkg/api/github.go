@@ -221,6 +221,42 @@ func (g *GitHubClient) GetDiscussions(ctx context.Context, owner, repo string) (
 	return []types.Discussion{}, nil
 }
 
+// GetWorkflowRuns fetches recent workflow runs for a repository
+func (g *GitHubClient) GetWorkflowRuns(ctx context.Context, owner, repo string) ([]types.WorkflowRun, error) {
+	var allRuns []types.WorkflowRun
+	cacheKey := fmt.Sprintf("workflow_runs_%s_%s", owner, repo)
+
+	// Try to get from cache first
+	if cachedRuns, found := g.cache.Get(cacheKey); found {
+		if g.config.Verbose {
+			log.Printf("Using cached workflow runs for %s/%s", owner, repo)
+		}
+		return cachedRuns.([]types.WorkflowRun), nil
+	}
+
+	if g.config.Verbose {
+		log.Printf("Fetching workflow runs for %s/%s", owner, repo)
+	}
+
+	opts := &github.ListWorkflowRunsOptions{
+		ListOptions: github.ListOptions{PerPage: 10}, // Limit to 10 most recent runs
+	}
+
+	runs, _, err := g.client.Actions.ListRepositoryWorkflowRuns(ctx, owner, repo, opts)
+	if err != nil {
+		return nil, fmt.Errorf("error fetching workflow runs: %w", err)
+	}
+
+	for _, run := range runs.WorkflowRuns {
+		allRuns = append(allRuns, convertWorkflowRun(run))
+	}
+
+	// Cache the results
+	g.cache.Set(cacheKey, allRuns)
+
+	return allRuns, nil
+}
+
 // Helper functions to convert GitHub API types to our domain types
 func convertRepository(repo *github.Repository) types.Repository {
 	r := types.Repository{
@@ -293,4 +329,27 @@ func convertIssue(issue *github.Issue) types.Issue {
 	}
 
 	return i
+}
+
+// Helper function to convert GitHub API types to our domain types
+func convertWorkflowRun(run *github.WorkflowRun) types.WorkflowRun {
+	workflowRun := types.WorkflowRun{
+		ID:         run.GetID(),
+		Name:       run.GetName(),
+		URL:        run.GetHTMLURL(),
+		Status:     run.GetStatus(),
+		Conclusion: run.GetConclusion(),
+		RunNumber:  run.GetRunNumber(),
+		Branch:     run.GetHeadBranch(),
+	}
+
+	if run.CreatedAt != nil {
+		workflowRun.CreatedAt = run.CreatedAt.Time
+	}
+
+	if run.UpdatedAt != nil {
+		workflowRun.UpdatedAt = run.UpdatedAt.Time
+	}
+
+	return workflowRun
 }
