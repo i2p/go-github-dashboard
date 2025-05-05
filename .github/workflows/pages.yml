@@ -1,0 +1,68 @@
+name: Generate GitHub Dashboard
+
+on:
+  schedule:
+    # Run once per day at 3:00 AM UTC
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+    # Allow manual triggering of the workflow
+
+jobs:
+  generate-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Needed for pushing to gh-pages branch
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.2'
+          cache: true
+
+      - name: Build dashboard generator
+        run: |
+          go build -o github-dashboard ./cmd/github-dashboard
+        
+      - name: Determine repository owner
+        id: owner
+        run: |
+          REPO_FULL_NAME="${GITHUB_REPOSITORY}"
+          OWNER="${REPO_FULL_NAME%%/*}"
+          
+          # Check if owner is an organization or user
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://api.github.com/orgs/$OWNER)
+          
+          if [ "$HTTP_STATUS" == "200" ]; then
+            echo "owner_type=org" >> $GITHUB_OUTPUT
+            echo "owner_name=$OWNER" >> $GITHUB_OUTPUT
+          else
+            echo "owner_type=user" >> $GITHUB_OUTPUT
+            echo "owner_name=$OWNER" >> $GITHUB_OUTPUT
+          fi
+          
+          echo "Determined owner: $OWNER (${HTTP_STATUS})"
+
+      - name: Generate dashboard
+        run: |
+          mkdir -p dashboard
+          
+          if [ "${{ steps.owner.outputs.owner_type }}" == "org" ]; then
+            ./github-dashboard generate --org ${{ steps.owner.outputs.owner_name }} --output ./dashboard --token ${{ secrets.GITHUB_TOKEN }}
+          else
+            ./github-dashboard generate --user ${{ steps.owner.outputs.owner_name }} --output ./dashboard --token ${{ secrets.GITHUB_TOKEN }}
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: dashboard
+          branch: gh-pages
+          clean: true
+          single-commit: true
+          commit-message: "Update dashboard [skip ci]"
